@@ -16,7 +16,7 @@ describe('Practice Test Login', () => {
     loginPage.login(validUsername, 'incorrectPassword').assertInvalidLogin('Your password is invalid!')
   })
 
-    it('shows an error for an invalid password', () => {
+  it('shows an error for an invalid password', () => {
     loginPage.login(validUsername, 'incorrectPassword').assertInvalidLogin('Your password is invalid!')
   })
 })
