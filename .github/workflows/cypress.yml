@@ -20,22 +20,27 @@ jobs:
 
     steps:
 
+      # 1. Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
+      # 3. Install dependencies
       - name: Install dependencies
         run: npm ci
 
+      # 4. Run Cypress tests
       - name: Run Cypress tests
         continue-on-error: true
         run: npm test
 
+      # 5. Generate Test Summary
       - name: Generate Test Summary
         if: always()
         run: |
@@ -58,13 +63,21 @@ jobs:
             for (const file of files) {
 
               const filePath = path.join(reportDir, file);
-              const report = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-              if (report.stats) {
-                total += report.stats.tests || 0;
-                passed += report.stats.passes || 0;
-                failed += report.stats.failures || 0;
-                pending += report.stats.pending || 0;
+              try {
+                const report = JSON.parse(
+                  fs.readFileSync(filePath, 'utf8')
+                );
+
+                if (report.stats) {
+                  total += report.stats.tests || 0;
+                  passed += report.stats.passes || 0;
+                  failed += report.stats.failures || 0;
+                  pending += report.stats.pending || 0;
+                }
+
+              } catch (error) {
+                console.log(`Could not read ${file}: ${error.message}`);
               }
             }
           }
@@ -73,6 +86,7 @@ jobs:
 
           const summary = `
           Cypress Test Execution Summary
+          =================================
 
           Repository: ${process.env.GITHUB_REPOSITORY}
           Branch: ${process.env.GITHUB_REF_NAME}
@@ -86,6 +100,9 @@ jobs:
 
           GitHub Actions Run:
           https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}
+
+          Mochawesome Report:
+          Download the "mochawesome-report" artifact from the GitHub Actions run.
           `;
 
           console.log(summary);
@@ -96,6 +113,16 @@ jobs:
           );
           NODE
 
+      # 6. Upload Mochawesome Report
+      - name: Upload Mochawesome Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mochawesome-report
+          path: cypress/reports/mochawesome/
+          if-no-files-found: warn
+
+      # 7. Send Email Notification
       - name: Send Email Notification
         if: always()
         uses: dawidd6/action-send-mail@v6
