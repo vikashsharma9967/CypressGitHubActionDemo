@@ -140,3 +140,5 @@ jobs:
           from: ${{ secrets.SMTP_USERNAME }}
 
           body: file://test-summary.txt
+
+          attachments: cypress/reports/mochawesome/mochawesome.html
