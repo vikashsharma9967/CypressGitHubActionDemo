@@ -12,6 +12,7 @@
   "type": "commonjs",
   "devDependencies": {
     "cypress": "^15.15.0",
+    "marge": "^1.0.1",
     "mochawesome": "^8.1.1",
     "mochawesome-merge": "^5.1.1",
     "mochawesome-report-generator": "^6.3.2"

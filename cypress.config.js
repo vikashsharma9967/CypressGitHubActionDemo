@@ -7,7 +7,7 @@ module.exports = defineConfig({
     reportDir: 'cypress/reports/mochawesome',
     overwrite: false,
     html: true,
-    json: false,
+    json: true,
   },
 
   e2e: {

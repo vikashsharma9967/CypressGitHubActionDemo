@@ -40,7 +40,20 @@ jobs:
         continue-on-error: true
         run: npm test
 
-      # 5. Generate Test Summary
+      # 5. Generate final Mochawesome HTML report
+      - name: Generate Mochawesome Report
+        if: always()
+        run: |
+          mkdir -p cypress/reports/final
+
+          npx mochawesome-merge "cypress/reports/mochawesome/*.json" \
+            -o cypress/reports/mochawesome/merged.json
+
+          npx marge cypress/reports/mochawesome/merged.json \
+            --reportDir cypress/reports/final \
+            --inline
+
+      # 6. Generate Test Summary
       - name: Generate Test Summary
         if: always()
         run: |
@@ -58,13 +71,17 @@ jobs:
           if (fs.existsSync(reportDir)) {
 
             const files = fs.readdirSync(reportDir)
-              .filter(file => file.endsWith('.json'));
+              .filter(file =>
+                file.endsWith('.json') &&
+                file !== 'merged.json'
+              );
 
             for (const file of files) {
 
               const filePath = path.join(reportDir, file);
 
               try {
+
                 const report = JSON.parse(
                   fs.readFileSync(filePath, 'utf8')
                 );
@@ -77,7 +94,9 @@ jobs:
                 }
 
               } catch (error) {
-                console.log(`Could not read ${file}: ${error.message}`);
+                console.log(
+                  `Could not read ${file}: ${error.message}`
+                );
               }
             }
           }
@@ -102,7 +121,7 @@ jobs:
           https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}
 
           Mochawesome Report:
-          Download the "mochawesome-report" artifact from the GitHub Actions run.
+          The detailed Mochawesome HTML report is attached to this email.
           `;
 
           console.log(summary);
@@ -113,16 +132,16 @@ jobs:
           );
           NODE
 
-      # 6. Upload Mochawesome Report
+      # 7. Upload report to GitHub Actions
       - name: Upload Mochawesome Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mochawesome-report
-          path: cypress/reports/mochawesome/
+          path: cypress/reports/final/
           if-no-files-found: warn
 
-      # 7. Send Email Notification
+      # 8. Send Email
       - name: Send Email Notification
         if: always()
         uses: dawidd6/action-send-mail@v6
@@ -141,4 +160,4 @@ jobs:
 
           body: file://test-summary.txt
 
-          attachments: cypress/reports/mochawesome/mochawesome.html
+          attachments: cypress/reports/final/merged.html
