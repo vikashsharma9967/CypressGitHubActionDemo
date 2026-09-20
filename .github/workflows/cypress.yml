@@ -6,6 +6,7 @@ on:
       - main
       - develop
       - VikashAutomation
+
   pull_request:
     branches:
       - main
@@ -32,3 +33,29 @@ jobs:
 
       - name: Run Cypress tests
         run: npm test
+
+      - name: Send Email Notification
+        if: always()
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_APP_PASSWORD }}
+          subject: Cypress Test Result - ${{ job.status }}
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          body: |
+            Cypress Test Execution Completed
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Workflow: ${{ github.workflow }}
+            Status: ${{ job.status }}
+
+            Commit:
+            ${{ github.sha }}
+
+            View workflow:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
