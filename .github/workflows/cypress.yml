@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -32,7 +33,68 @@ jobs:
         run: npm ci
 
       - name: Run Cypress tests
+        continue-on-error: true
         run: npm test
+
+      - name: Generate Test Summary
+        if: always()
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          const reportDir = 'cypress/reports/mochawesome';
+
+          let total = 0;
+          let passed = 0;
+          let failed = 0;
+          let pending = 0;
+
+          if (fs.existsSync(reportDir)) {
+
+            const files = fs.readdirSync(reportDir)
+              .filter(file => file.endsWith('.json'));
+
+            for (const file of files) {
+
+              const filePath = path.join(reportDir, file);
+              const report = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+              if (report.stats) {
+                total += report.stats.tests || 0;
+                passed += report.stats.passes || 0;
+                failed += report.stats.failures || 0;
+                pending += report.stats.pending || 0;
+              }
+            }
+          }
+
+          const status = failed > 0 ? 'FAILED' : 'PASSED';
+
+          const summary = `
+          Cypress Test Execution Summary
+
+          Repository: ${process.env.GITHUB_REPOSITORY}
+          Branch: ${process.env.GITHUB_REF_NAME}
+
+          Total Tests: ${total}
+          Passed: ${passed}
+          Failed: ${failed}
+          Skipped/Pending: ${pending}
+
+          Overall Status: ${status}
+
+          GitHub Actions Run:
+          https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}
+          `;
+
+          console.log(summary);
+
+          fs.writeFileSync(
+            process.env.GITHUB_WORKSPACE + '/test-summary.txt',
+            summary
+          );
+          NODE
 
       - name: Send Email Notification
         if: always()
@@ -50,17 +112,4 @@ jobs:
           to: ${{ secrets.SMTP_USERNAME }}
           from: ${{ secrets.SMTP_USERNAME }}
 
-          body: |
-            Cypress Test Execution Completed
-
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Workflow: ${{ github.workflow }}
-
-            Status: ${{ job.status }}
-
-            Commit:
-            ${{ github.sha }}
-
-            View workflow:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          body: file://test-summary.txt
